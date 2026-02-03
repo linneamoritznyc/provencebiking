@@ -13,29 +13,33 @@
   let activeRoute = null;
   let activeFilters = new Set(Object.keys(POI_CATEGORIES));
 
+  // ============ HELPERS ============
+  function isMobile() {
+    return window.innerWidth <= 768;
+  }
+
   // ============ MAP SETUP ============
   function initMap() {
     map = L.map("map", {
       center: [43.85, 5.3],
       zoom: 8,
-      zoomControl: true,
-      attributionControl: true
+      zoomControl: false,
+      attributionControl: true,
+      tap: true
     });
 
+    // Add zoom control to top-right (better mobile placement)
+    L.control.zoom({ position: "topright" }).addTo(map);
+
     // Tile layers
-    const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    var osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 18
     });
 
-    const topoLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    var topoLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
       maxZoom: 17
-    });
-
-    const cycleLayer = L.tileLayer("https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=", {
-      attribution: '&copy; <a href="https://www.thunderforest.com/">Thunderforest</a>',
-      maxZoom: 18
     });
 
     // Default layer
@@ -121,17 +125,16 @@
       }
     });
 
-    // Fit map to route
-    map.fitBounds(routeLayers[routeId].getBounds(), { padding: [40, 40] });
+    // Fit map to route (extra bottom padding on mobile for bottom sheet)
+    var padding = isMobile() ? [40, 40, 200, 40] : [40, 40];
+    map.fitBounds(routeLayers[routeId].getBounds(), { padding: padding });
 
     // Show detail panel
     showRouteDetail(route);
     activeRoute = routeId;
 
     // Close sidebar on mobile
-    if (window.innerWidth <= 768) {
-      document.getElementById("sidebar").classList.remove("open");
-    }
+    closeSidebar();
   };
 
   function showRouteDetail(route) {
@@ -143,10 +146,10 @@
     var stagesHtml = route.stages.map(function (stage) {
       return '<div class="stage-card">' +
         '<div class="stage-day">Day ' + stage.day + '</div>' +
-        '<div class="stage-title">' + stage.from + ' → ' + stage.to + '</div>' +
+        '<div class="stage-title">' + stage.from + ' &rarr; ' + stage.to + '</div>' +
         '<div class="stage-stats">' +
           '<span>' + stage.km + ' km</span>' +
-          '<span>↑ ' + stage.climb + 'm climbing</span>' +
+          '<span>&uarr; ' + stage.climb + 'm climbing</span>' +
         '</div>' +
         '<div class="stage-desc">' + stage.description + '</div>' +
       '</div>';
@@ -175,6 +178,7 @@
         '<ul>' + tipsHtml + '</ul>' +
       '</div>';
 
+    panel.classList.remove("expanded");
     panel.classList.add("open");
   }
 
@@ -204,7 +208,7 @@
 
     var popupHtml =
       '<div class="popup-title">' + poi.name + '</div>' +
-      '<div class="popup-category">' + cat.label + ' · ' + poi.type + '</div>' +
+      '<div class="popup-category">' + cat.label + ' &middot; ' + poi.type + '</div>' +
       '<div class="popup-desc">' + poi.description + '</div>' +
       (poi.price ? '<div style="font-size:12px;font-weight:600;color:#4a7c59;">' + poi.price + '</div>' : '') +
       '<div class="popup-link" onclick="window.showPOIDetail(\'' + poi.id + '\')">More info</div>';
@@ -251,13 +255,14 @@
         '<span class="poi-detail-icon">' + cat.icon + '</span>' +
         '<div>' +
           '<div class="poi-detail-name">' + poi.name + '</div>' +
-          '<div class="poi-detail-type">' + cat.label + ' · ' + poi.type + '</div>' +
+          '<div class="poi-detail-type">' + cat.label + ' &middot; ' + poi.type + '</div>' +
         '</div>' +
       '</div>' +
       (poi.price ? '<div class="poi-detail-price">' + poi.price + '</div>' : '') +
       '<div class="poi-detail-desc">' + poi.description + '</div>' +
       (routeNames ? '<div class="poi-detail-routes"><strong>Near route:</strong> ' + routeNames + '</div>' : '');
 
+    panel.classList.remove("expanded");
     panel.classList.add("open");
   };
 
@@ -295,25 +300,136 @@
     });
   }
 
+  // ============ SIDEBAR OPEN/CLOSE ============
+  function openSidebar() {
+    var sidebar = document.getElementById("sidebar");
+    var backdrop = document.getElementById("sidebarBackdrop");
+    sidebar.classList.add("open");
+    if (isMobile()) {
+      backdrop.classList.add("visible");
+    }
+  }
+
+  function closeSidebar() {
+    var sidebar = document.getElementById("sidebar");
+    var backdrop = document.getElementById("sidebarBackdrop");
+    sidebar.classList.remove("open");
+    backdrop.classList.remove("visible");
+  }
+
+  function toggleSidebar() {
+    var sidebar = document.getElementById("sidebar");
+    if (sidebar.classList.contains("open")) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
+
+  // ============ DETAIL PANEL CLOSE ============
+  function closeDetailPanel() {
+    var panel = document.getElementById("detailPanel");
+    panel.classList.remove("open");
+    panel.classList.remove("expanded");
+
+    // Reset route highlighting
+    Object.keys(routeLayers).forEach(function (id) {
+      routeLayers[id].setStyle({ weight: 4, opacity: 0.8 });
+    });
+    document.querySelectorAll(".route-card").forEach(function (card) {
+      card.classList.remove("active");
+    });
+    activeRoute = null;
+  }
+
+  // ============ BOTTOM SHEET DRAG (MOBILE) ============
+  function initBottomSheetDrag() {
+    var panel = document.getElementById("detailPanel");
+    var handle = document.getElementById("detailDragHandle");
+    var startY = 0;
+    var startHeight = 0;
+    var isDragging = false;
+
+    handle.addEventListener("touchstart", function (e) {
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startHeight = panel.getBoundingClientRect().height;
+      panel.style.transition = "none";
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener("touchmove", function (e) {
+      if (!isDragging) return;
+      var deltaY = startY - e.touches[0].clientY;
+      var newHeight = Math.max(0, startHeight + deltaY);
+      var maxHeight = window.innerHeight * 0.9;
+      newHeight = Math.min(newHeight, maxHeight);
+      panel.style.height = newHeight + "px";
+    }, { passive: true });
+
+    document.addEventListener("touchend", function () {
+      if (!isDragging) return;
+      isDragging = false;
+      panel.style.transition = "";
+
+      var currentHeight = panel.getBoundingClientRect().height;
+      var windowHeight = window.innerHeight;
+
+      if (currentHeight < 100) {
+        // Dragged down far enough — close
+        closeDetailPanel();
+        panel.style.height = "";
+      } else if (currentHeight > windowHeight * 0.65) {
+        // Dragged up — expand to full
+        panel.classList.add("expanded");
+        panel.style.height = "";
+      } else {
+        // Snap back to default half-height
+        panel.classList.remove("expanded");
+        panel.style.height = "";
+      }
+    });
+  }
+
+  // ============ MOBILE BOTTOM NAV ============
+  function initMobileNav() {
+    document.getElementById("mobileNavRoutes").addEventListener("click", function () {
+      toggleSidebar();
+      // Scroll sidebar to routes section
+      var routeSection = document.querySelector(".sidebar-section:first-child");
+      if (routeSection) routeSection.scrollIntoView({ behavior: "smooth" });
+    });
+
+    document.getElementById("mobileNavLayers").addEventListener("click", function () {
+      toggleSidebar();
+      // Scroll sidebar to layers section
+      setTimeout(function () {
+        var filterSection = document.querySelector(".sidebar-section:nth-child(2)");
+        if (filterSection) filterSection.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    });
+
+    document.getElementById("mobileNavAbout").addEventListener("click", function () {
+      closeSidebar();
+      document.getElementById("aboutModal").classList.add("open");
+    });
+  }
+
   // ============ UI INTERACTIONS ============
   function initUI() {
-    // Sidebar toggle (mobile)
+    // Sidebar toggle (hamburger)
     document.getElementById("sidebarToggle").addEventListener("click", function () {
-      document.getElementById("sidebar").classList.toggle("open");
+      toggleSidebar();
+    });
+
+    // Sidebar backdrop tap to close
+    document.getElementById("sidebarBackdrop").addEventListener("click", function () {
+      closeSidebar();
     });
 
     // Detail panel close
     document.getElementById("detailClose").addEventListener("click", function () {
-      document.getElementById("detailPanel").classList.remove("open");
-
-      // Reset route highlighting
-      Object.keys(routeLayers).forEach(function (id) {
-        routeLayers[id].setStyle({ weight: 4, opacity: 0.8 });
-      });
-      document.querySelectorAll(".route-card").forEach(function (card) {
-        card.classList.remove("active");
-      });
-      activeRoute = null;
+      closeDetailPanel();
     });
 
     // About modal
@@ -334,9 +450,23 @@
 
     // Close sidebar when clicking map on mobile
     map.on("click", function () {
-      if (window.innerWidth <= 768) {
-        document.getElementById("sidebar").classList.remove("open");
+      if (isMobile()) {
+        closeSidebar();
       }
+    });
+
+    // Mobile-specific features
+    initBottomSheetDrag();
+    initMobileNav();
+
+    // Invalidate map size on orientation change
+    window.addEventListener("resize", function () {
+      if (map) map.invalidateSize();
+    });
+    window.addEventListener("orientationchange", function () {
+      setTimeout(function () {
+        if (map) map.invalidateSize();
+      }, 200);
     });
   }
 

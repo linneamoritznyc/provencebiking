@@ -746,6 +746,79 @@ ul {
   text-decoration: underline;
 }
 
+/* ---------- Sidebar Backdrop (mobile) ---------- */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 899;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.sidebar-backdrop.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* ---------- Detail Panel Drag Handle (mobile) ---------- */
+.detail-drag-handle {
+  display: none;
+  justify-content: center;
+  padding: 10px 0 4px;
+  cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+}
+.detail-drag-handle span {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+/* ---------- Mobile Bottom Nav ---------- */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 950;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: 6px 0;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  justify-content: center;
+}
+.mobile-nav-btn:active {
+  color: var(--color-accent);
+}
+.mobile-nav-btn.active {
+  color: var(--color-accent);
+}
+
 /* ---------- Scrollbar ---------- */
 .sidebar::-webkit-scrollbar,
 .detail-panel::-webkit-scrollbar,
@@ -776,6 +849,10 @@ ul {
 }
 
 @media (max-width: 768px) {
+  :root {
+    --mobile-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+
   .sidebar-toggle {
     display: flex;
   }
@@ -784,41 +861,133 @@ ul {
     display: none;
   }
 
+  /* Show mobile nav */
+  .mobile-nav {
+    display: flex;
+  }
+
+  /* Show drag handle on detail panel */
+  .detail-drag-handle {
+    display: flex;
+  }
+
+  /* Adjust app layout for bottom nav */
+  .app-layout {
+    height: calc(100vh - var(--header-height) - var(--mobile-nav-height));
+  }
+
+  /* Sidebar as overlay */
   .sidebar {
     position: fixed;
     top: var(--header-height);
     left: 0;
-    bottom: 0;
+    bottom: var(--mobile-nav-height);
+    width: 300px;
+    min-width: 300px;
     transform: translateX(-100%);
     box-shadow: var(--shadow-lg);
     z-index: 900;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .sidebar.open {
     transform: translateX(0);
   }
 
+  /* Detail panel as bottom sheet */
   .detail-panel {
     position: fixed;
-    bottom: 0;
+    bottom: var(--mobile-nav-height);
     left: 0;
     right: 0;
     width: 100% !important;
     min-width: 100% !important;
     height: 0;
+    max-height: calc(100vh - var(--header-height) - var(--mobile-nav-height));
     border-left: none;
-    border-top: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
     transition: height 0.3s ease;
     z-index: 900;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .detail-panel.open {
     height: 55vh;
     width: 100% !important;
     min-width: 100% !important;
   }
+  /* When dragged to full height */
+  .detail-panel.expanded {
+    height: calc(100vh - var(--header-height) - var(--mobile-nav-height));
+  }
 
+  /* Make detail close button more visible */
+  .detail-close {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+
+  /* Bigger touch targets for route cards */
+  .route-card {
+    padding: 14px 14px 14px 18px;
+    min-height: 44px;
+  }
+
+  /* Bigger touch targets for filter toggles */
+  .filter-toggle {
+    padding: 12px 10px;
+    min-height: 44px;
+  }
+
+  .filter-toggle input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Bigger popup links for touch */
+  .popup-link {
+    display: inline-block;
+    padding: 6px 0;
+    font-size: 14px;
+    min-height: 44px;
+    line-height: 32px;
+  }
+
+  /* Move legend above mobile nav and out of bottom-sheet way */
   .map-legend {
     bottom: 12px;
     left: 8px;
+    max-width: 150px;
+  }
+
+  /* Move zoom controls up to avoid bottom sheet overlap */
+  .leaflet-top.leaflet-right {
+    top: 8px;
+    right: 8px;
+  }
+  .leaflet-bottom.leaflet-left {
+    bottom: 8px;
+  }
+
+  /* Modal improvements */
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .modal {
+    max-height: 85vh;
+    padding: 24px 20px;
+    border-radius: 16px 16px 0 0;
+    margin-bottom: 0;
+  }
+
+  /* Safe area padding for header */
+  .header {
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
   }
 }
 
@@ -826,11 +995,32 @@ ul {
   .logo {
     font-size: 16px;
   }
+  /* Keep About visible via bottom nav; hide header button */
   .header-right {
     display: none;
   }
   .sidebar {
-    width: 280px;
-    min-width: 280px;
+    width: 85vw;
+    min-width: 85vw;
+    max-width: 320px;
+  }
+
+  /* Full-screen modal on very small phones */
+  .modal-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+  .modal {
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+    padding-top: 48px;
+  }
+  .modal-close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
   }
 }
