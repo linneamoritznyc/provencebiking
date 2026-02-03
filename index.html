@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provence by Bike — Self-Supported Cycling Routes</title>
+  <meta name="description" content="Plan your self-supported bike tour through Provence. Routes, camping, cheap food, water sources, and everything you need for bikepacking in southern France.">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+        <span></span><span></span><span></span>
+      </button>
+      <h1 class="logo">
+        <span class="logo-icon">&#x1F6B2;</span>
+        Provence by Bike
+      </h1>
+    </div>
+    <div class="header-center">
+      <p class="tagline">Self-supported cycling routes through southern France</p>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-outline" id="aboutBtn">About</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div class="app-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-content">
+
+        <!-- Routes Section -->
+        <section class="sidebar-section">
+          <h2 class="section-title">Routes</h2>
+          <div class="route-list" id="routeList">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="sidebar-section">
+          <h2 class="section-title">Map Layers</h2>
+          <div class="filter-group" id="filterGroup">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- Practical Info -->
+        <section class="sidebar-section">
+          <h2 class="section-title">Quick Tips</h2>
+          <div class="tips-box">
+            <div class="tip">
+              <strong>Water:</strong> Always carry 2L minimum. Fountains marked on the map are potable unless noted.
+            </div>
+            <div class="tip">
+              <strong>Camping:</strong> Wild camping ("bivouac") is tolerated in many areas if you pitch after 7pm and leave by 9am. National parks are stricter.
+            </div>
+            <div class="tip">
+              <strong>Food Budget:</strong> Expect to spend €10-15/day buying from supermarkets and markets. Baguette + cheese + tomatoes = classic cyclist lunch.
+            </div>
+            <div class="tip">
+              <strong>Season:</strong> Best months are May-June and September. July-August is hot (35°C+) and crowded.
+            </div>
+            <div class="tip">
+              <strong>Mistral:</strong> The strong north wind can blow for days. Plan routes south-to-north if possible to ride with it.
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+
+    <!-- MAP -->
+    <main class="map-container">
+      <div id="map"></div>
+
+      <!-- Map Legend -->
+      <div class="map-legend" id="mapLegend">
+        <button class="legend-toggle" id="legendToggle">Legend</button>
+        <div class="legend-content" id="legendContent">
+          <div class="legend-section">
+            <h4>Route Difficulty</h4>
+            <div class="legend-item"><span class="legend-line" style="background:#3498db"></span> Easy</div>
+            <div class="legend-item"><span class="legend-line" style="background:#e67e22"></span> Moderate</div>
+            <div class="legend-item"><span class="legend-line" style="background:#e74c3c"></span> Hard</div>
+          </div>
+          <div class="legend-section">
+            <h4>Points of Interest</h4>
+            <div class="legend-item"><span class="legend-dot" style="background:#27ae60"></span> Camping</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f39c12"></span> Food & Markets</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#3498db"></span> Water Sources</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#9b59b6"></span> Bike Shops</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#8b1a2b"></span> Attractions</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#16a085"></span> Rest Stops</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL (Route/POI Details) -->
+    <aside class="detail-panel" id="detailPanel">
+      <button class="detail-close" id="detailClose">&times;</button>
+      <div class="detail-content" id="detailContent">
+        <!-- Default state -->
+        <div class="detail-empty">
+          <div class="detail-empty-icon">&#x1F5FA;</div>
+          <h3>Select a Route or Point</h3>
+          <p>Click a route in the sidebar or a marker on the map to see details.</p>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ABOUT MODAL -->
+  <div class="modal-overlay" id="aboutModal">
+    <div class="modal">
+      <button class="modal-close" id="aboutClose">&times;</button>
+      <h2>About Provence by Bike</h2>
+      <p>This site is for self-supported bike tourists planning multi-day rides through Provence with their own bike, tent, and camping stove.</p>
+
+      <h3>What You'll Find</h3>
+      <ul>
+        <li><strong>5 pre-planned routes</strong> from 3 to 5 days, covering easy coastal rides to the Mont Ventoux challenge.</li>
+        <li><strong>Camping spots</strong> — both municipal campsites (€10-15/night) and free bivouac locations.</li>
+        <li><strong>Cheap food sources</strong> — supermarkets (Lidl, Intermarché), weekly markets with local produce, and village bakeries.</li>
+        <li><strong>Water fountains</strong> — potable water refill points along each route.</li>
+        <li><strong>Bike shops</strong> — for repairs and spare parts.</li>
+        <li><strong>Attractions</strong> — Roman ruins, lavender fields, gorges, and the prettiest villages.</li>
+      </ul>
+
+      <h3>Packing Essentials</h3>
+      <ul>
+        <li>2L water capacity minimum (3L in summer)</li>
+        <li>Camping stove + fuel canister (buy Campingaz at Decathlon or large supermarkets)</li>
+        <li>Lightweight tent — summer nights are warm, 3-season is fine</li>
+        <li>Basic bike repair kit: spare tube, pump, multitool, tire levers, chain link</li>
+        <li>Sun protection: hat, sunscreen, arm sleeves</li>
+        <li>Rain jacket (rare in summer but the Mistral brings cold snaps)</li>
+      </ul>
+
+      <h3>Budget</h3>
+      <p>Self-supported touring in Provence can be done for <strong>€20-30/day</strong> including camping fees, food from supermarkets/markets, and the occasional café stop. Cooking your own meals with a stove brings costs down further.</p>
+
+      <h3>Getting There</h3>
+      <p>TGV trains serve Avignon, Aix-en-Provence, and Marseille. Bikes travel free on TGV if you book a bike space (limited, book early). Regional TER trains accept bikes without reservation.</p>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/routes.js"></script>
+  <script src="js/pois.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
